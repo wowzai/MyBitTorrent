@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"reflect"
+	//"strconv"
+	//"strings"
 )
 
 func Encode(obj interface{}) string {
@@ -25,6 +27,14 @@ func encode(value reflect.Value) string {
 			}
 			result += "e"
 		}
+	case reflect.Array:
+		if value.Len() > 0 {
+			result += "l"
+			for i := 0; i < value.Len(); i++ {
+				result += encode(value.Index(i)) //这里写value.Slice(i,i)就不行
+			}
+			result += "e"
+		}
 	case reflect.Map:
 		if value.Len() > 0 {
 			result += "d"
@@ -32,10 +42,8 @@ func encode(value reflect.Value) string {
 				for _, key := range value.MapKeys() {
 					result += encode(key)
 					if value.MapIndex(key).Kind() == reflect.Interface {
-						//fmt.Println("...1...")
 						result += encode(value.MapIndex(key).Elem())
 					} else {
-						//fmt.Println("...2...")
 						result += encode(value.MapIndex(key))
 					}
 				}
@@ -45,19 +53,46 @@ func encode(value reflect.Value) string {
 			}
 			result += "e"
 		}
+	case reflect.Struct:
+		result += "d"
+		numFields := value.NumField() //获取结构体中的成员个数
+		for i := 0; i < numFields; i++ {
+			fieldName := value.Type().Field(i).Name
+			result += fmt.Sprintf("%d:%s", len(fieldName), fieldName)
+			result += encode(value.Field(i))
+		}
+		result += "e"
+	case reflect.Interface:
+		result += encode(value.Elem())
 	}
 	return result
 }
 
-func main() {
-	/*
-		obj := map[string]interface{}{
-			"o1": []string{"str1", "str2", "str3"},
-			"o2": []string{"str4", "str5"},
-			"o3": []int{12, 32},
-		}
-	*/
+func Decode(str string, index int) interface{} {
 
+	return nil
+}
+
+func CheckErr(err error) {
+	if err != nil {
+		fmt.Printf("err:%v\n", err)
+	}
+}
+
+type structA struct {
+	A int
+	B string
+	C string
+}
+
+type any interface{}
+
+type SVPair struct {
+	s string
+	v any
+}
+
+func main() {
 	obj := map[string]interface{}{
 		"name": "create chen",
 		"age":  23,
@@ -67,6 +102,7 @@ func main() {
 	var str string = "hello"
 	var ints []int = []int{12, 32, 1, 45, 2, 8}
 	var strs []string = []string{"str1", "str2", "str3"}
+	sa := structA{10, "foo", "bar"}
 
 	fmt.Println("---encode int---")
 	fmt.Println(Encode(i))
@@ -78,4 +114,8 @@ func main() {
 	fmt.Println(Encode(strs))
 	fmt.Println("---encode map[string]object---")
 	fmt.Println(Encode(obj))
+	fmt.Println("---encode struct---")
+	fmt.Println(Encode(sa))
+	fmt.Println("---encode map[string]any---")
+	fmt.Println(Encode(map[string]any{"cat": 1, "dog": 2}))
 }
